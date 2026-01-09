@@ -83,7 +83,7 @@
         const IS_TEACHER_MODE = true;
 
         // データのバージョン管理
-        const DATA_VERSION = "2024-v8-custom-level-names"; 
+        const DATA_VERSION = "2024-v10-final-fix"; 
 
         // 技ID定義 (内部IDは固定)
         const TRICK_IDS = [
@@ -276,9 +276,6 @@
           // 設定画面用State
           const [settingTab, setSettingTab] = useState('low'); // low, mid, high
 
-          // 級判定ロジック用 Ref
-          const prevBestLevelRef = useRef(null);
-          const [isInitialized, setIsInitialized] = useState(false);
           const fileInputRef = useRef(null); // ファイル読み込み用
 
           // --- 初期化 & データ保存 ---
@@ -319,10 +316,6 @@
                 if (savedLevels) setLevelsData(JSON.parse(savedLevels));
                 if (savedNames) setTrickNames(JSON.parse(savedNames));
             }
-            
-            // 初期化完了
-            setIsInitialized(true);
-
           }, []);
 
           // データ保存
@@ -507,8 +500,6 @@ newScriptContent + '\n' +
               localStorage.removeItem('nawatobi_records');
               localStorage.removeItem('nawatobi_max_records');
               localStorage.removeItem('nawatobi_history');
-              // 判定用Refリセット
-              prevBestLevelRef.current = null;
               window.location.reload();
             }
           };
@@ -716,16 +707,15 @@ newScriptContent + '\n' +
 
             // 3. 自己ベストを更新
             const currentMax = maxRecords[trickId] || 0;
-            let nextMaxRecords = maxRecords; // 更新がない場合はそのまま
             
             if (newCount > currentMax) {
-                nextMaxRecords = { ...maxRecords, [trickId]: newCount };
+                const newMaxRecords = { ...maxRecords, [trickId]: newCount };
                 // 状態更新
-                setMaxRecords(nextMaxRecords);
-                localStorage.setItem('nawatobi_max_records', JSON.stringify(nextMaxRecords));
+                setMaxRecords(newMaxRecords);
+                localStorage.setItem('nawatobi_max_records', JSON.stringify(newMaxRecords));
                 
                 // 4. 新しい状態でのベスト級を計算
-                const newBestLevel = calculateBestLevel(nextMaxRecords, currentCategory);
+                const newBestLevel = calculateBestLevel(newMaxRecords, currentCategory);
                 
                 // 5. 級が上がった（数値が小さくなった）場合、ポップアップを表示
                 if (newBestLevel < oldBestLevel) {
