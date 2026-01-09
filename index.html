@@ -64,6 +64,16 @@
             animation: confetti 4s linear infinite;
         }
 
+        /* input type="number" のスピンボタンを消す */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
         body {
             touch-action: manipulation;
         }
@@ -75,7 +85,7 @@
     <script type="text/babel" data-type="module" id="app-script">
         import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
-        import { Trophy, Medal, Star, Calendar, Activity, RefreshCw, ChevronUp, ChevronDown, CheckCircle, User, Award, School, Home, ArrowLeft, RotateCcw, Pencil, Settings, Save, AlertCircle, Download, FileDown, Sparkles, MessageCircle, Send, KeyRound, Target, X, Copy, Flame, CalendarDays, Upload } from 'lucide-react';
+        import { Trophy, Medal, Star, Calendar, Activity, RefreshCw, ChevronUp, ChevronDown, CheckCircle, User, Award, School, Home, ArrowLeft, RotateCcw, Pencil, Settings, Save, AlertCircle, Download, FileDown, Sparkles, MessageCircle, Send, KeyRound, Target, X, Copy, Flame, CalendarDays, Upload, Check } from 'lucide-react';
 
         // --- 定数定義 ---
         
@@ -83,7 +93,7 @@
         const IS_TEACHER_MODE = true;
 
         // データのバージョン管理
-        const DATA_VERSION = "2024-v10-final-fix"; 
+        const DATA_VERSION = "2024-v8-custom-level-names"; 
 
         // 技ID定義 (内部IDは固定)
         const TRICK_IDS = [
@@ -183,7 +193,7 @@
             { level: 4, reqs: { mae: 140, ushiro: 140, kousa: 15, kousa_ushiro: 8, niju: 8, aya_ushiro: 8, aya_niju: 4 } },
             { level: 3, reqs: { mae: 160, ushiro: 160, kousa: 20, kousa_ushiro: 10, niju: 10, aya_ushiro: 10, aya_niju: 6 } },
             { level: 2, reqs: { mae: 180, ushiro: 180, kousa: 25, kousa_ushiro: 15, niju: 12, aya_ushiro: 12, aya_niju: 8 } },
-            { level: 1, reqs: { mae: 200, ushiro: 200, kousa: 30, kousa_ushiro: 20, niju: 15, aya_ushiro: 14, aya_niju: 10 } },
+            { level: 1, reqs: { mae: 200, ushiro: 200, kousa_ushiro: 30, niju: 20, aya_niju: 20, kousa_niju: 3, niju_ushiro: 7, sanju: 3 } },
           ],
 
           // 5・6年生用
@@ -261,6 +271,7 @@
           // --- State ---
           const [user, setUser] = useState({ grade: 1, classVal: '', name: '', isRegistered: true });
           const [records, setRecords] = useState({});
+          const [dailyRecords, setDailyRecords] = useState({}); // 日ごとの全記録を保存
           const [maxRecords, setMaxRecords] = useState({}); // 自己ベスト記録
           const [history, setHistory] = useState({});
           const [activeTab, setActiveTab] = useState('home');
@@ -281,7 +292,8 @@
           // --- 初期化 & データ保存 ---
           useEffect(() => {
             const savedUser = localStorage.getItem('nawatobi_user');
-            const savedRecords = localStorage.getItem('nawatobi_records');
+            // dailyRecordsの読み込み
+            const savedDailyRecords = localStorage.getItem('nawatobi_daily_records');
             const savedMaxRecords = localStorage.getItem('nawatobi_max_records'); // 自己ベスト読み込み
             const savedHistory = localStorage.getItem('nawatobi_history');
             const savedLevels = localStorage.getItem('nawatobi_levels');
@@ -292,15 +304,27 @@
             const isOldVersion = savedVersion !== DATA_VERSION;
             
             if (savedUser) setUser({ ...JSON.parse(savedUser), isRegistered: true });
-            if (savedRecords) setRecords(JSON.parse(savedRecords));
             if (savedHistory) setHistory(JSON.parse(savedHistory));
             
+            // dailyRecordsの初期化と今日のデータのロード
+            let initialDailyRecords = {};
+            if (savedDailyRecords) {
+                initialDailyRecords = JSON.parse(savedDailyRecords);
+                setDailyRecords(initialDailyRecords);
+            }
+            // 初期表示時（今日）のデータをセット
+            const today = new Date().toISOString().split('T')[0];
+            if (initialDailyRecords[today]) {
+                setRecords(initialDailyRecords[today]);
+            }
+
             // maxRecordsの初期化ロジック
             if (savedMaxRecords) {
                 setMaxRecords(JSON.parse(savedMaxRecords));
-            } else if (savedRecords) {
+            } else if (localStorage.getItem('nawatobi_records')) {
                 // 移行措置: maxRecordsがない場合は既存のrecordsをコピーして初期値とする
-                const initialMax = JSON.parse(savedRecords);
+                // (過去バージョンのrecordsは実質max扱いだったため)
+                const initialMax = JSON.parse(localStorage.getItem('nawatobi_records'));
                 setMaxRecords(initialMax);
                 localStorage.setItem('nawatobi_max_records', JSON.stringify(initialMax));
             }
@@ -320,8 +344,21 @@
 
           // データ保存
           useEffect(() => localStorage.setItem('nawatobi_user', JSON.stringify(user)), [user]);
+          useEffect(() => localStorage.setItem('nawatobi_daily_records', JSON.stringify(dailyRecords)), [dailyRecords]);
+          // recordsは一時的な入力値なのでLocalStorageへの保存は必須ではないが、リロード対策などで残しても良い。
+          // ただし今回はdailyRecordsで管理するため、nawatobi_recordsへの保存は削除してもよいが、互換性のため残すか、削除するか。
+          // 今回の仕様変更で「日付変更時にリセット」されるため、nawatobi_recordsは「直近の入力値」としての意味合いになる。
           useEffect(() => localStorage.setItem('nawatobi_records', JSON.stringify(records)), [records]);
           useEffect(() => localStorage.setItem('nawatobi_history', JSON.stringify(history)), [history]);
+
+          // targetDateが変更されたときの処理（重要）
+          useEffect(() => {
+              if (dailyRecords[targetDate]) {
+                  setRecords(dailyRecords[targetDate]);
+              } else {
+                  setRecords({});
+              }
+          }, [targetDate, dailyRecords]);
 
           const handleSaveSettings = () => {
               localStorage.setItem('nawatobi_levels', JSON.stringify(levelsData));
@@ -455,6 +492,15 @@
 '            background-size: 100px 100px;\n' +
 '            animation: confetti 4s linear infinite;\n' +
 '        }\n' +
+'        /* input type="number" のスピンボタンを消す */\n' +
+'        input[type="number"]::-webkit-outer-spin-button,\n' +
+'        input[type="number"]::-webkit-inner-spin-button {\n' +
+'            -webkit-appearance: none;\n' +
+'            margin: 0;\n' +
+'        }\n' +
+'        input[type="number"] {\n' +
+'            -moz-appearance: textfield;\n' +
+'        }\n' +
 '        body {\n' +
 '            touch-action: manipulation;\n' +
 '        }\n' +
@@ -495,9 +541,11 @@ newScriptContent + '\n' +
           const handleReset = () => {
             if(window.confirm('本当に記録をリセットして最初から始めますか？設定は保持されます。')) {
               setRecords({});
+              setDailyRecords({});
               setMaxRecords({});
               setHistory({});
               localStorage.removeItem('nawatobi_records');
+              localStorage.removeItem('nawatobi_daily_records');
               localStorage.removeItem('nawatobi_max_records');
               localStorage.removeItem('nawatobi_history');
               window.location.reload();
@@ -616,7 +664,7 @@ newScriptContent + '\n' +
               const cleared = levels.filter(lvl => {
                   // 名前が空（無効）な級はスキップ
                   if (lvl.name === '') return false;
-                  if (!lvl.reqs) return true; // 条件なしは達成とみなすか？ここでは条件があるものだけチェック
+                  if (!lvl.reqs) return true; 
                   
                   // 要件チェック
                   return Object.entries(lvl.reqs).every(([trickId, requiredCount]) => {
@@ -693,39 +741,62 @@ newScriptContent + '\n' +
             document.body.removeChild(textArea);
           };
           
-          // --- レコード更新時の処理（ここで級判定も行う） ---
+          // --- 「けってい」ボタン押下時の処理（ここで級判定も行う） ---
+          const handleConfirmRecord = (trickId) => {
+              const currentCount = parseInt(records[trickId] || 0); // 数値化を確実にする
+              const currentMax = maxRecords[trickId] || 0;
+              
+              // 1. 現在（更新前）のベスト級を計算
+              const currentCategory = user.grade <= 2 ? 'low' : user.grade <= 4 ? 'mid' : 'high';
+              const oldBestLevel = calculateBestLevel(maxRecords, currentCategory);
+              
+              let nextMaxRecords = { ...maxRecords };
+              let isNewRecord = false;
+
+              // 日ごとの記録（dailyRecords）を更新
+              const newDailyRecords = { ...dailyRecords };
+              if (!newDailyRecords[targetDate]) {
+                  newDailyRecords[targetDate] = {};
+              }
+              newDailyRecords[targetDate][trickId] = currentCount;
+              setDailyRecords(newDailyRecords);
+              localStorage.setItem('nawatobi_daily_records', JSON.stringify(newDailyRecords));
+
+              // 2. 自己ベスト更新チェック
+              if (currentCount > currentMax) {
+                  nextMaxRecords[trickId] = currentCount;
+                  setMaxRecords(nextMaxRecords);
+                  localStorage.setItem('nawatobi_max_records', JSON.stringify(nextMaxRecords));
+                  isNewRecord = true;
+              }
+              
+              // 3. 履歴の更新
+              const historyKey = targetDate;
+              // 記録が0より大きければ履歴をtrueに、0なら履歴から消す（あるいはtrueのままにするか。ここでは一度やったら履歴に残す方針）
+              const newHistory = { ...history, [historyKey]: true };
+              setHistory(newHistory);
+              localStorage.setItem('nawatobi_history', JSON.stringify(newHistory));
+
+              // 4. 級判定（新しい状態でのベスト級）
+              const newBestLevel = calculateBestLevel(nextMaxRecords, currentCategory);
+
+              // 5. 級が上がった（数値が小さくなった）場合、ポップアップを表示
+              if (newBestLevel < oldBestLevel) {
+                  setShowConfetti(true);
+              } else if (isNewRecord) {
+                   // 自己ベスト更新のみのフィードバック（任意）
+                   alert(`「${displayTricks.find(t => t.id === trickId).label}」の 自己ベスト(${currentCount}回) を こうしん しました！`);
+              } else {
+                   // 通常保存
+                   // alert(`「${displayTricks.find(t => t.id === trickId).label}」の きろく(${currentCount}回) を 保存しました。`);
+              }
+          };
+          
+          // --- レコード更新時の処理（入力中は入力値のみ更新） ---
           const updateRecord = (trickId, count) => {
-            const newCount = Math.max(0, parseInt(count) || 0);
-            
-            // 1. 現在（更新前）のベスト級を計算
-            const currentCategory = user.grade <= 2 ? 'low' : user.grade <= 4 ? 'mid' : 'high';
-            const oldBestLevel = calculateBestLevel(maxRecords, currentCategory);
-
-            // 2. レコードを更新
-            const newRecords = { ...records, [trickId]: newCount };
+            // 文字列のまま受け取り、数値変換は使用時に行う（空文字入力を許容するため）
+            const newRecords = { ...records, [trickId]: count };
             setRecords(newRecords);
-
-            // 3. 自己ベストを更新
-            const currentMax = maxRecords[trickId] || 0;
-            
-            if (newCount > currentMax) {
-                const newMaxRecords = { ...maxRecords, [trickId]: newCount };
-                // 状態更新
-                setMaxRecords(newMaxRecords);
-                localStorage.setItem('nawatobi_max_records', JSON.stringify(newMaxRecords));
-                
-                // 4. 新しい状態でのベスト級を計算
-                const newBestLevel = calculateBestLevel(newMaxRecords, currentCategory);
-                
-                // 5. 級が上がった（数値が小さくなった）場合、ポップアップを表示
-                if (newBestLevel < oldBestLevel) {
-                    setShowConfetti(true);
-                }
-            }
-
-            const historyKey = targetDate;
-            const newHistory = { ...history, [historyKey]: true };
-            setHistory(newHistory);
           };
 
 
@@ -740,7 +811,7 @@ newScriptContent + '\n' +
                   }
               } else {
                   if (!newData[category][levelIndex].reqs) {
-                       newData[category][levelIndex].reqs = {};
+                        newData[category][levelIndex].reqs = {};
                   }
                   newData[category][levelIndex].reqs[trickId] = val;
               }
@@ -992,7 +1063,7 @@ newScriptContent + '\n' +
                                        onChange={(e) => setUser(prev => ({ ...prev, classVal: e.target.value }))}
                                        placeholder="組"
                                        className="w-full p-2 rounded-md border border-sky-200 bg-white text-base font-bold focus:border-sky-400 focus:outline-none text-center select-text"
-                                     />
+                                      />
                                 </div>
                                 <div className="flex-1">
                                     <input 
@@ -1094,16 +1165,33 @@ newScriptContent + '\n' +
                               </div>
                           </div>
                       </div>
+                      
+                      {/* 過去の日付やデータがある場合の案内メッセージ */}
+                      {(targetDate !== new Date().toISOString().split('T')[0] || Object.keys(records).length > 0) && (
+                          <div className="text-xs text-orange-500 bg-orange-50 p-2 rounded mb-2 border border-orange-200 text-center font-bold">
+                              数字をかえたらけっていボタンをおします
+                          </div>
+                      )}
+
                       <p className="text-xs text-slate-400 mb-4 ml-7">
                         ひっかからずに <span className="text-pink-500 font-bold">れんぞく</span> でとべた回数
                       </p>
                       <div className="space-y-3">
                         {displayTricks.map((trick) => {
                           const currentCount = records[trick.id] || 0;
+                          const currentCountNum = parseInt(currentCount || 0);
+                          
+                          // 保存されている値を取得
+                          const savedCount = dailyRecords[targetDate]?.[trick.id];
+                          const savedCountNum = parseInt(savedCount || 0);
+
+                          // 保存済みかどうかの判定（値が一致しているか）
+                          const isSaved = currentCountNum === savedCountNum;
+
                           // 技ごとの最高記録を取得
                           const currentMax = maxRecords[trick.id] || 0;
                           
-                          // 最高到達級の判定（すでにmaxRecordsを使うようになっている）
+                          // 最高到達級の判定
                           const bestLevel = getTrickLevel(trick.id); 
 
                           return (
@@ -1132,24 +1220,56 @@ newScriptContent + '\n' +
                             </div>
                             <div className="flex items-center gap-2">
                               <button 
-                                onClick={() => updateRecord(trick.id, (records[trick.id] || 0) - 1)}
+                                onClick={() => updateRecord(trick.id, (parseInt(records[trick.id] || 0) - 1))}
                                 className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center active:scale-95 touch-manipulation hover:bg-slate-100"
                               >
                                 <ChevronDown size={20} />
                               </button>
                               <input
                                 type="number"
+                                inputMode="numeric"
                                 pattern="\d*"
-                                className="w-16 text-center font-black text-2xl bg-transparent border-b-2 border-slate-200 focus:border-sky-500 focus:outline-none p-1 select-text"
-                                value={records[trick.id] || 0}
-                                onChange={(e) => updateRecord(trick.id, e.target.value)}
+                                className={`w-16 text-center font-black text-2xl bg-transparent border-b-2 border-slate-200 focus:border-sky-500 focus:outline-none p-1 select-text ime-active ${isSaved ? 'text-sky-600' : 'text-slate-800'}`}
+                                value={records[trick.id] > 0 ? records[trick.id] : ''}
+                                placeholder="0"
+                                onFocus={(e) => {
+                                    // 選択動作を少し遅らせることで挙動を安定させる
+                                    const target = e.target;
+                                    requestAnimationFrame(() => {
+                                        target.select();
+                                    });
+                                }}
+                                onChange={(e) => {
+                                    // シンプルに入力値をそのまま渡す（パースはupdateRecord側で行われる）
+                                    updateRecord(trick.id, e.target.value);
+                                }}
                               />
                               <span className="text-xs font-bold text-slate-400 mt-2 whitespace-nowrap">回</span>
                               <button 
-                                onClick={() => updateRecord(trick.id, (records[trick.id] || 0) + 1)}
+                                onClick={() => updateRecord(trick.id, (parseInt(records[trick.id] || 0) + 1))}
                                 className="w-10 h-10 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center active:scale-95 shadow-sm touch-manipulation hover:bg-sky-200"
                               >
                                 <ChevronUp size={20} />
+                              </button>
+                              <button 
+                                onClick={() => handleConfirmRecord(trick.id)}
+                                className={`ml-1 text-xs font-bold py-2 px-3 rounded-lg shadow-sm active:scale-95 transition-all flex flex-col items-center leading-none ${
+                                    isSaved 
+                                    ? 'bg-sky-100 text-sky-600 border-2 border-sky-200' 
+                                    : 'bg-green-500 hover:bg-green-600 text-white animate-pulse'
+                                }`}
+                              >
+                                {isSaved ? (
+                                    <>
+                                        <CheckCircle size={16} className="mb-0.5" />
+                                        <span>保存済</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={16} className="mb-0.5" />
+                                        <span>けってい</span>
+                                    </>
+                                )}
                               </button>
                             </div>
                           </div>
@@ -1288,14 +1408,14 @@ newScriptContent + '\n' +
                                     </div>
                                   </div>
                                 );
-                              })
-                         ) : (
+                             })
+                          ) : (
                              <div className="text-center p-6 bg-yellow-50 rounded-xl border border-yellow-200">
                                  <Trophy size={40} className="mx-auto text-yellow-500 mb-2" />
                                  <div className="text-lg font-bold text-yellow-600">すべての級をクリア！</div>
                                  <div className="text-xs text-yellow-600">おめでとうございます！</div>
                              </div>
-                         )}
+                          )}
                        </div>
                     </div>
 
@@ -1400,13 +1520,13 @@ newScriptContent + '\n' +
                       </div>
 
                       <div className="mt-6 bg-green-50 p-4 rounded-xl border border-green-100 text-left">
-                         <div className="flex items-center gap-3 mb-2">
-                            <User className="text-green-600" size={20}/>
-                            <span className="font-bold text-green-800">{user.name ? user.name : '名無し'} さんのきろく</span>
-                         </div>
-                         <div className="text-xs text-green-700">
-                           {user.isRegistered ? '記録中' : '未登録'}
-                         </div>
+                          <div className="flex items-center gap-3 mb-2">
+                             <User className="text-green-600" size={20}/>
+                             <span className="font-bold text-green-800">{user.name ? user.name : '名無し'} さんのきろく</span>
+                          </div>
+                          <div className="text-xs text-green-700">
+                            {user.isRegistered ? '記録中' : '未登録'}
+                          </div>
                       </div>
                     </div>
 
