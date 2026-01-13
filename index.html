@@ -85,8 +85,8 @@
     <script type="text/babel" data-type="module" id="app-script">
         import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
-        import { Trophy, Medal, Star, Calendar, Activity, RefreshCw, ChevronUp, ChevronDown, CheckCircle, User, Award, School, Home, ArrowLeft, RotateCcw, Pencil, Settings, Save, AlertCircle, Download, FileDown, Sparkles, MessageCircle, Send, KeyRound, Target, X, Copy, Flame, CalendarDays, Upload, Check } from 'lucide-react';
-
+        import { Trophy, Medal, Star, Calendar, Activity, RefreshCw, ChevronUp, ChevronDown, CheckCircle, User, Award, School, Home, ArrowLeft, RotateCcw, Pencil, Settings, Save, AlertCircle, Download, FileDown, Sparkles, MessageCircle, Send, KeyRound, Target, X, Copy, Flame, CalendarDays, Upload, Check, RefreshCw as RefreshIcon, HelpCircle, HardDriveDownload, HardDriveUpload } from 'lucide-react';
+        
         // --- 定数定義 ---
         
         // 先生モードフラグ（書き出し時にfalseに書き換えられる）
@@ -268,6 +268,15 @@
         // --- コンポーネント ---
 
         function App() {
+          // --- 日付フォーマット用ヘルパー関数 (YYYY-MM-DD) ---
+          // これを使って日本時間（ローカルタイム）での日付文字列を取得します
+          const getLocalDateString = useCallback((date = new Date()) => {
+              const year = date.getFullYear();
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              const day = date.getDate().toString().padStart(2, '0');
+              return `${year}-${month}-${day}`;
+          }, []);
+
           // --- State ---
           const [user, setUser] = useState({ grade: 1, classVal: '', name: '', isRegistered: true });
           const [records, setRecords] = useState({});
@@ -277,7 +286,14 @@
           const [activeTab, setActiveTab] = useState('home');
           const [showConfetti, setShowConfetti] = useState(false);
           const [lastClearedLevel, setLastClearedLevel] = useState(null);
-          const [targetDate, setTargetDate] = useState(new Date().toISOString().split('T')[0]); // 記録対象日
+          // 初期値をローカルタイム関数で設定
+          const [targetDate, setTargetDate] = useState(() => {
+              const d = new Date();
+              const year = d.getFullYear();
+              const month = (d.getMonth() + 1).toString().padStart(2, '0');
+              const day = d.getDate().toString().padStart(2, '0');
+              return `${year}-${month}-${day}`;
+          }); 
 
           
           // カスタマイズ用State
@@ -288,6 +304,7 @@
           const [settingTab, setSettingTab] = useState('low'); // low, mid, high
 
           const fileInputRef = useRef(null); // ファイル読み込み用
+          const userDataInputRef = useRef(null); // ユーザーデータインポート用
 
           // --- 初期化 & データ保存 ---
           useEffect(() => {
@@ -313,7 +330,8 @@
                 setDailyRecords(initialDailyRecords);
             }
             // 初期表示時（今日）のデータをセット
-            const today = new Date().toISOString().split('T')[0];
+            // ここもローカルタイムを使用
+            const today = getLocalDateString();
             if (initialDailyRecords[today]) {
                 setRecords(initialDailyRecords[today]);
             }
@@ -322,8 +340,7 @@
             if (savedMaxRecords) {
                 setMaxRecords(JSON.parse(savedMaxRecords));
             } else if (localStorage.getItem('nawatobi_records')) {
-                // 移行措置: maxRecordsがない場合は既存のrecordsをコピーして初期値とする
-                // (過去バージョンのrecordsは実質max扱いだったため)
+                // 移行措置
                 const initialMax = JSON.parse(localStorage.getItem('nawatobi_records'));
                 setMaxRecords(initialMax);
                 localStorage.setItem('nawatobi_max_records', JSON.stringify(initialMax));
@@ -346,9 +363,8 @@
           useEffect(() => localStorage.setItem('nawatobi_user', JSON.stringify(user)), [user]);
           useEffect(() => localStorage.setItem('nawatobi_daily_records', JSON.stringify(dailyRecords)), [dailyRecords]);
           // recordsは一時的な入力値なのでLocalStorageへの保存は必須ではないが、リロード対策などで残しても良い。
-          // ただし今回はdailyRecordsで管理するため、nawatobi_recordsへの保存は削除してもよいが、互換性のため残すか、削除するか。
-          // 今回の仕様変更で「日付変更時にリセット」されるため、nawatobi_recordsは「直近の入力値」としての意味合いになる。
           useEffect(() => localStorage.setItem('nawatobi_records', JSON.stringify(records)), [records]);
+          useEffect(() => localStorage.setItem('nawatobi_max_records', JSON.stringify(maxRecords)), [maxRecords]);
           useEffect(() => localStorage.setItem('nawatobi_history', JSON.stringify(history)), [history]);
 
           // targetDateが変更されたときの処理（重要）
@@ -412,6 +428,94 @@
               reader.readAsText(file);
               // Reset value
               event.target.value = '';
+          };
+
+          // ユーザーデータのエクスポート
+          const handleUserDataExport = () => {
+              const data = {
+                  user,
+                  records,
+                  maxRecords,
+                  history,
+                  dailyRecords,
+                  savedAt: new Date().toISOString(),
+                  version: DATA_VERSION
+              };
+              const jsonStr = JSON.stringify(data, null, 2);
+              const blob = new Blob([jsonStr], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              // ファイル名の日付もローカルタイムに
+              a.download = `nawatobi-data-${user.name || 'user'}-${getLocalDateString()}.json`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              alert('きろくファイルを ほぞんしました！');
+          };
+
+          // ユーザーデータのインポート
+          const handleUserDataImport = (event) => {
+              const file = event.target.files[0];
+              if (!file) return;
+              
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                  try {
+                      const data = JSON.parse(e.target.result);
+                      // 簡易バリデーション
+                      if (data.user && data.records) {
+                          if(window.confirm('このファイルを よみこむと、いまの きろくは うわがき されます。よろしいですか？')) {
+                              setUser(data.user);
+                              
+                              if(data.maxRecords) setMaxRecords(data.maxRecords);
+                              if(data.history) setHistory(data.history);
+                              
+                              let newTargetDate = targetDate; // デフォルトは現在の日付
+
+                              // dailyRecords（日ごとの記録）の復元と日付設定
+                              if(data.dailyRecords && Object.keys(data.dailyRecords).length > 0) {
+                                  setDailyRecords(data.dailyRecords);
+                                  localStorage.setItem('nawatobi_daily_records', JSON.stringify(data.dailyRecords));
+                                  
+                                  // 記録がある日付の中で、一番新しい日付を探してセットする
+                                  const dates = Object.keys(data.dailyRecords).sort();
+                                  if (dates.length > 0) {
+                                      const lastDate = dates[dates.length - 1];
+                                      newTargetDate = lastDate;
+                                  }
+                              } else {
+                                  // もし日ごとの記録がない場合（古い形式など）、recordsの内容をsavedAt（または今日）の日付としてdailyRecordsに登録する
+                                  // savedAtのパースもUTCまたぎを考慮して文字列処理
+                                  const saveDate = data.savedAt ? data.savedAt.substring(0, 10) : getLocalDateString();
+                                  const newDaily = { [saveDate]: data.records };
+                                  setDailyRecords(newDaily);
+                                  localStorage.setItem('nawatobi_daily_records', JSON.stringify(newDaily));
+                                  newTargetDate = saveDate;
+                              }
+                              
+                              // LocalStorageも更新
+                              localStorage.setItem('nawatobi_user', JSON.stringify(data.user));
+                              localStorage.setItem('nawatobi_max_records', JSON.stringify(data.maxRecords || {}));
+                              localStorage.setItem('nawatobi_history', JSON.stringify(data.history || {}));
+                              
+                              // 日付を更新（これにより画面の数字もその日のものに切り替わります）
+                              setTargetDate(newTargetDate);
+                              
+                              alert('きろくを ふくげん しました！\nさいごに きろくした ひづけ を ひょうじ します。');
+                              setActiveTab('home');
+                          }
+                      } else {
+                          alert('ファイルが ちがうようです。正しいファイルを選んでください。');
+                      }
+                  } catch (err) {
+                      console.error(err);
+                      alert('ファイルの読み込みに失敗しました。');
+                  }
+              };
+              reader.readAsText(file);
+              event.target.value = ''; // Reset
           };
 
           const handleExportHtml = () => {
@@ -519,7 +623,8 @@ newScriptContent + '\n' +
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `nawatobi-custom-${new Date().toISOString().split('T')[0]}.html`;
+              // ファイル名の日付もローカルタイム
+              a.download = `nawatobi-custom-${getLocalDateString()}.html`;
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);
@@ -983,10 +1088,12 @@ newScriptContent + '\n' +
                       </div>
                     )}
                   </div>
-                  <div className="text-right">
-                      <div className="text-[10px] text-slate-400 font-bold">げんざいのきゅう</div>
-                      <div className="text-xl font-black text-pink-500 leading-none">
-                        {currentBestLevel ? currentBestLevel.name : '―'}
+                  <div className="flex items-center gap-3">
+                      <div className="text-right">
+                          <div className="text-[10px] text-slate-400 font-bold">げんざいのきゅう</div>
+                          <div className="text-xl font-black text-pink-500 leading-none">
+                            {currentBestLevel ? currentBestLevel.name : '―'}
+                          </div>
                       </div>
                   </div>
                 </div>
@@ -1118,6 +1225,18 @@ newScriptContent + '\n' +
                           </button>
                         </div>
                         
+                        {/* データの移動（子ども向け） */}
+                        <div className="mt-6 pt-4 border-t border-slate-200">
+                            <h3 className="text-xs font-bold text-slate-400 mb-2 text-center">データの ひっこし（きしゅへん）</h3>
+                            <button 
+                                onClick={() => setActiveTab('backup')}
+                                className="w-full flex items-center justify-center gap-2 p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl text-indigo-700 font-bold transition-all active:scale-95 text-sm"
+                            >
+                                <HardDriveDownload size={18} />
+                                データの ほぞん・ふくげん
+                            </button>
+                        </div>
+
                         <div className="mt-4 text-center">
                             <button 
                               onClick={handleReset}
@@ -1130,6 +1249,72 @@ newScriptContent + '\n' +
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* --- データ移行画面 (子ども向け) --- */}
+                {activeTab === 'backup' && (
+                    <div className="space-y-4 animate-fadeIn">
+                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                            <div className="flex items-center gap-2 mb-4 text-indigo-600">
+                                <HardDriveDownload size={24} />
+                                <h2 className="text-lg font-bold">データの ほぞん・ふくげん</h2>
+                            </div>
+                            
+                            <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                                このパソコン（タブレット）の記録を、ほかのパソコンに移したいときや、記録をバックアップしたいときに使います。
+                            </p>
+
+                            <div className="space-y-4">
+                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                    <h3 className="font-bold text-indigo-800 mb-2 flex items-center gap-2">
+                                        <FileDown size={18} /> 1. 記録をファイルにする
+                                    </h3>
+                                    <p className="text-xs text-indigo-600 mb-3">
+                                        今の記録を「ファイル」として保存します。
+                                    </p>
+                                    <button 
+                                        onClick={handleUserDataExport}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Download size={18} />
+                                        きろくを ほぞんする
+                                    </button>
+                                </div>
+
+                                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                                    <h3 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
+                                        <FileDown size={18} className="rotate-180" /> 2. 記録をファイルからもどす
+                                    </h3>
+                                    <p className="text-xs text-orange-600 mb-3">
+                                        保存したファイルを使って、記録を元に戻します。<br/>
+                                        <span className="font-bold text-red-500">※今の記録は上書きされて消えます。</span>
+                                    </p>
+                                    <input 
+                                        type="file" 
+                                        ref={userDataInputRef}
+                                        style={{ display: 'none' }}
+                                        accept=".json"
+                                        onChange={handleUserDataImport}
+                                    />
+                                    <button 
+                                        onClick={() => userDataInputRef.current.click()}
+                                        className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-lg shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Upload size={18} />
+                                        きろくを もどす（ふくげん）
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => setActiveTab('home')}
+                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 mt-6 border-2 border-slate-200"
+                        >
+                            <Home size={20} />
+                            表紙（ホーム）にもどる
+                        </button>
+                    </div>
                 )}
 
                 {/* --- 記録入力画面 --- */}
@@ -1167,7 +1352,7 @@ newScriptContent + '\n' +
                       </div>
                       
                       {/* 過去の日付やデータがある場合の案内メッセージ */}
-                      {(targetDate !== new Date().toISOString().split('T')[0] || Object.keys(records).length > 0) && (
+                      {(targetDate !== getLocalDateString() || Object.keys(records).length > 0) && (
                           <div className="text-xs text-orange-500 bg-orange-50 p-2 rounded mb-2 border border-orange-200 text-center font-bold">
                               数字をかえたらけっていボタンをおします
                           </div>
@@ -1446,7 +1631,8 @@ newScriptContent + '\n' +
                           <div className="text-3xl font-black text-orange-500">
                               {/* 連続日数の計算（簡易） */}
                               {(() => {
-                                  const toKey = (d) => d.toISOString().split('T')[0];
+                                  // ローカルタイムでキーを生成
+                                  const toKey = (d) => getLocalDateString(d);
                                   const now = new Date();
                                   let count = 0;
                                   let isTodayDone = false;
@@ -1496,10 +1682,10 @@ newScriptContent + '\n' +
                         {[...Array(14)].map((_, i) => {
                           const d = new Date();
                           d.setDate(d.getDate() - (13 - i));
-                          const dateKey = d.toISOString().split('T')[0];
+                          const dateKey = getLocalDateString(d);
                           const dayNum = d.getDate();
                           const hasHistory = history[dateKey];
-                          const isToday = new Date().toISOString().split('T')[0] === dateKey;
+                          const isToday = getLocalDateString() === dateKey;
 
                           return (
                             <div key={i} className="flex flex-col items-center gap-1">
