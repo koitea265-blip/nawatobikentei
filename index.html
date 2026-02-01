@@ -7,7 +7,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Babel for JSX transformation -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     
     <!-- Import Map for module resolution -->
     <script type="importmap">
@@ -82,7 +82,7 @@
 <body class="bg-sky-50 text-slate-800 select-none">
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module" id="app-script">
+    <script type="text/babel" data-type="module" data-presets="react" id="app-script">
         import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
         import { Trophy, Medal, Star, Calendar, Activity, RefreshCw, ChevronUp, ChevronDown, CheckCircle, User, Award, School, Home, ArrowLeft, RotateCcw, Pencil, Settings, Save, AlertCircle, Download, FileDown, Sparkles, MessageCircle, Send, KeyRound, Target, X, Copy, Flame, CalendarDays, Upload, Check, RefreshCw as RefreshIcon, HelpCircle, HardDriveDownload, HardDriveUpload } from 'lucide-react';
@@ -211,13 +211,13 @@
             { level: 10, reqs: { mae: 90, ushiro: 70, kakeashi: 90, kakeashi_ushiro: 60, aya: 40, kousa: 20, kousa_ushiro: 1, niju: 16, aya_ushiro: 16 } }, 
             { level: 9, reqs: { mae: 100, ushiro: 80, kakeashi: 100, kakeashi_ushiro: 80, aya: 45, kousa: 25, kousa_ushiro: 3, niju: 20, aya_ushiro: 20 } }, 
             { level: 8, reqs: { mae: 120, ushiro: 100, kakeashi: 120, kakeashi_ushiro: 100, aya: 50, kousa: 30, kousa_ushiro: 5, niju: 24, aya_ushiro: 24 } }, 
-            { level: 7, reqs: { mae: 140, ushiro: 110, kousa_ushiro: 3, niju: 8, aya_niju: 1, sokushin: 4, niju_ushiro: 1, zengo_kousa: 1 } },
-            { level: 6, reqs: { mae: 150, ushiro: 120, kousa_ushiro: 5, niju: 10, aya_niju: 3, sokushin: 8, niju_ushiro: 2, zengo_kousa: 5 } },
-            { level: 5, reqs: { mae: 160, ushiro: 130, kousa_ushiro: 8, niju: 12, aya_niju: 5, sokushin: 12, niju_ushiro: 3, zengo_kousa: 10 } },
-            { level: 4, reqs: { mae: 170, ushiro: 140, kousa_ushiro: 10, niju: 14, aya_niju: 8, sokushin: 24, niju_ushiro: 4, zengo_kousa: 20 } },
-            { level: 3, reqs: { mae: 180, ushiro: 160, kousa_ushiro: 15, niju: 16, aya_niju: 10, kousa_niju: 1, niju_ushiro: 5, sanju: 1 } },
-            { level: 2, reqs: { mae: 190, ushiro: 180, kousa_ushiro: 20, niju: 18, aya_niju: 15, kousa_niju: 2, niju_ushiro: 6, sanju: 2 } },
-            { level: 1, reqs: { mae: 200, ushiro: 200, kousa_ushiro: 30, niju: 20, aya_niju: 20, kousa_niju: 3, niju_ushiro: 7, sanju: 3 } },
+            { level: 7, reqs: { mae: 140, ushiro: 110, kousa_ushiro: 3, niju: 8, aya_niju: 1, sokushin: 4, niju_ushiro: 1, zengo_kousa: 1 } }, 
+            { level: 6, reqs: { mae: 150, ushiro: 120, kousa_ushiro: 5, niju: 10, aya_niju: 3, sokushin: 8, niju_ushiro: 2, zengo_kousa: 5 } }, 
+            { level: 5, reqs: { mae: 160, ushiro: 130, kousa_ushiro: 8, niju: 12, aya_niju: 5, sokushin: 12, niju_ushiro: 3, zengo_kousa: 10 } }, 
+            { level: 4, reqs: { mae: 170, ushiro: 140, kousa_ushiro: 10, niju: 14, aya_niju: 8, sokushin: 24, niju_ushiro: 4, zengo_kousa: 20 } }, 
+            { level: 3, reqs: { mae: 180, ushiro: 160, kousa_ushiro: 15, niju: 16, aya_niju: 10, kousa_niju: 1, niju_ushiro: 5, sanju: 1 } }, 
+            { level: 2, reqs: { mae: 190, ushiro: 180, kousa_ushiro: 20, niju: 18, aya_niju: 15, kousa_niju: 2, niju_ushiro: 6, sanju: 2 } }, 
+            { level: 1, reqs: { mae: 200, ushiro: 200, kousa_ushiro: 30, niju: 20, aya_niju: 20, kousa_niju: 3, niju_ushiro: 7, sanju: 3 } }, 
           ],
         };
 
@@ -540,7 +540,7 @@
 '    <!-- Tailwind CSS -->\n' +
 '    <script src="https://cdn.tailwindcss.com"><\/script>\n' +
 '    <!-- Babel for JSX transformation -->\n' +
-'    <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>\n' +
+'    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"><\/script>\n' +
 '    \n' +
 '    <!-- Import Map for module resolution -->\n' +
 '    <script type="importmap">\n' +
@@ -613,7 +613,7 @@
 '<body class="bg-sky-50 text-slate-800 select-none">\n' +
 '    <div id="root"></div>\n' +
 '\n' +
-'    <script type="text/babel" data-type="module" id="app-script">\n' +
+'    <script type="text/babel" data-type="module" data-presets="react" id="app-script">\n' +
 newScriptContent + '\n' +
 '    <\/script>\n' +
 '</body>\n' +
