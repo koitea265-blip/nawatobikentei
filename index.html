@@ -83,9 +83,9 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module" data-presets="react" id="app-script">
-        import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-        import { createRoot } from 'react-dom/client';
-        import { Trophy, Medal, Star, Calendar, Activity, RefreshCw, ChevronUp, ChevronDown, CheckCircle, User, Award, School, Home, ArrowLeft, RotateCcw, Pencil, Settings, Save, AlertCircle, Download, FileDown, Sparkles, MessageCircle, Send, KeyRound, Target, X, Copy, Flame, CalendarDays, Upload, Check, RefreshCw as RefreshIcon, HelpCircle, HardDriveDownload, HardDriveUpload } from 'lucide-react';
+        import React, { useState, useEffect, useMemo, useCallback, useRef } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { Trophy, Medal, Star, Calendar, Activity, RefreshCw, ChevronUp, ChevronDown, CheckCircle, User, Award, School, Home, ArrowLeft, RotateCcw, Pencil, Settings, Save, AlertCircle, Download, FileDown, Sparkles, MessageCircle, Send, KeyRound, Target, X, Copy, Flame, CalendarDays, Upload, Check, RefreshCw as RefreshIcon, HelpCircle, HardDriveDownload, HardDriveUpload } from 'https://esm.sh/lucide-react@0.292.0';
         
         // --- 定数定義 ---
         
@@ -104,6 +104,7 @@
         ];
 
         // 技のデフォルト表示名定義
+        // MARKER:TRICK_NAMES_START
         const DEFAULT_TRICK_NAMES = {
             low: { // 1・2年
                 mae: 'りょうあしとび', ushiro: 'りょうあしとび（うしろ）', kataashi: 'かたあしとび', kakeashi: 'かけあしとび', kakeashi_ushiro: 'かけあしとび（うしろ）',
@@ -124,6 +125,7 @@
                 zengo_kousa: '前後交差とび', sanju: '３重とび'
             }
         };
+        // MARKER:TRICK_NAMES_END
 
         // 技の色設定 (固定)
         const TRICK_COLORS = {
@@ -147,6 +149,7 @@
         };
 
         // デフォルト級判定データ
+        // MARKER:LEVELS_DATA_START
         const DEFAULT_LEVELS_DATA = {
           // 1・2年生用
           low: [
@@ -220,6 +223,7 @@
             { level: 1, reqs: { mae: 200, ushiro: 200, kousa_ushiro: 30, niju: 20, aya_niju: 20, kousa_niju: 3, niju_ushiro: 7, sanju: 3 } }, 
           ],
         };
+        // MARKER:LEVELS_DATA_END
 
         // --- 日本の祝日・休日判定ロジック (簡易実装) ---
         function isJapaneseHoliday(date) {
@@ -521,13 +525,19 @@
           const handleExportHtml = () => {
               const scriptContent = document.getElementById('app-script').textContent;
               // 修正箇所：文字列結合を使用してSyntaxErrorを回避
-              const newLevelsDataStr = 'const DEFAULT_LEVELS_DATA = ' + JSON.stringify(levelsData, null, 2) + ';';
-              const newTrickNamesStr = 'const DEFAULT_TRICK_NAMES = ' + JSON.stringify(trickNames, null, 2) + ';';
+              const newLevelsDataStr = `// MARKER:LEVELS_DATA_START
+        const DEFAULT_LEVELS_DATA = ${JSON.stringify(levelsData, null, 2)};
+        // MARKER:LEVELS_DATA_END`;
+
+              const newTrickNamesStr = `// MARKER:TRICK_NAMES_START
+        const DEFAULT_TRICK_NAMES = ${JSON.stringify(trickNames, null, 2)};
+        // MARKER:TRICK_NAMES_END`;
+
               const newVersionStr = 'const DATA_VERSION = "' + DATA_VERSION + '-custom-' + Date.now() + '";';
               
               let newScriptContent = scriptContent
-                  .replace(/const DEFAULT_LEVELS_DATA = \{[\s\S]*?\};/, newLevelsDataStr)
-                  .replace(/const DEFAULT_TRICK_NAMES = \{[\s\S]*?\};/, newTrickNamesStr)
+                  .replace(/\/\/ MARKER:LEVELS_DATA_START[\s\S]*?\/\/ MARKER:LEVELS_DATA_END/, newLevelsDataStr)
+                  .replace(/\/\/ MARKER:TRICK_NAMES_START[\s\S]*?\/\/ MARKER:TRICK_NAMES_END/, newTrickNamesStr)
                   .replace(/const DATA_VERSION = ".*?";/, newVersionStr)
                   .replace('const IS_TEACHER_MODE = true;', 'const IS_TEACHER_MODE = false;');
               
